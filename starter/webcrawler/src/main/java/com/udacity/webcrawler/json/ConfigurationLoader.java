@@ -1,6 +1,8 @@
 package com.udacity.webcrawler.json;
 
+import java.io.IOException;
 import java.io.Reader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
@@ -22,11 +24,15 @@ public final class ConfigurationLoader {
    * Loads configuration from this {@link ConfigurationLoader}'s path
    *
    * @return the loaded {@link CrawlerConfiguration}.
+ * @throws IOException 
    */
-  public CrawlerConfiguration load() {
-    // TODO: Fill in this method.
-
-    return new CrawlerConfiguration.Builder().build();
+  public CrawlerConfiguration load() throws IOException {
+    //  Fill in this method.
+	try (Reader reader = Files.newBufferedReader(path)) {
+		return read(reader);
+	} catch (IOException e) {
+		throw new IOException("Error reading from file: " + path, e);
+	}
   }
 
   /**
