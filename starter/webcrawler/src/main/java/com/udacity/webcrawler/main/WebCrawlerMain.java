@@ -49,6 +49,9 @@ public final class WebCrawlerMain {
 		Writer profileOutputWriter = config.getProfileOutputPath().isEmpty() ? new OutputStreamWriter(System.out)
 				: Files.newBufferedWriter(Paths.get(config.getProfileOutputPath()));
 		profiler.writeData(profileOutputWriter);
+		if (config.getResultPath().isEmpty() || config.getProfileOutputPath().isEmpty()) {
+			profileOutputWriter.flush();
+		}
 	}
 
 	public static void main(String[] args) throws Exception {
