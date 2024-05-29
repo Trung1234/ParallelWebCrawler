@@ -8,9 +8,12 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
 /**
  * A data class that represents the configuration of a single web crawl.
  */
+@JsonDeserialize(builder = CrawlerConfiguration.Builder.class)  
 public final class CrawlerConfiguration {
 
   private final List<String> startPages;

@@ -14,39 +14,50 @@ import javax.inject.Inject;
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Objects;
 
 public final class WebCrawlerMain {
 
-  private final CrawlerConfiguration config;
+	private final CrawlerConfiguration config;
 
-  private WebCrawlerMain(CrawlerConfiguration config) {
-    this.config = Objects.requireNonNull(config);
-  }
+	private WebCrawlerMain(CrawlerConfiguration config) {
+		this.config = Objects.requireNonNull(config);
+	}
 
-  @Inject
-  private WebCrawler crawler;
+	@Inject
+	private WebCrawler crawler;
 
-  @Inject
-  private Profiler profiler;
+	@Inject
+	private Profiler profiler;
 
-  private void run() throws Exception {
-    Guice.createInjector(new WebCrawlerModule(config), new ProfilerModule()).injectMembers(this);
+	private void run() throws Exception {
+		Guice.createInjector(new WebCrawlerModule(config), new ProfilerModule()).injectMembers(this);
 
-    CrawlResult result = crawler.crawl(config.getStartPages());
-    CrawlResultWriter resultWriter = new CrawlResultWriter(result);
-    // TODO: Write the crawl results to a JSON file (or System.out if the file name is empty)
-    // TODO: Write the profile data to a text file (or System.out if the file name is empty)
-  }
+		CrawlResult result = crawler.crawl(config.getStartPages());
+		CrawlResultWriter resultWriter = new CrawlResultWriter(result);
+		// Write the crawl results to a JSON file (or System.out if the file name is
+		// empty)
+		Writer crawlOutputWriter = config.getResultPath().isEmpty() ? new OutputStreamWriter(System.out)
+				: Files.newBufferedWriter(Paths.get(config.getResultPath()));
+		resultWriter.write(crawlOutputWriter);
 
-  public static void main(String[] args) throws Exception {
-    if (args.length != 1) {
-      System.out.println("Usage: WebCrawlerMain [starting-url]");
-      return;
-    }
+		// Write the profile data to a text file (or System.out if the file name is
+		// empty)
+		Writer profileOutputWriter = config.getProfileOutputPath().isEmpty() ? new OutputStreamWriter(System.out)
+				: Files.newBufferedWriter(Paths.get(config.getProfileOutputPath()));
+		profiler.writeData(profileOutputWriter);
+	}
 
-    CrawlerConfiguration config = new ConfigurationLoader(Path.of(args[0])).load();
-    new WebCrawlerMain(config).run();
-  }
+	public static void main(String[] args) throws Exception {
+		if (args.length != 1) {
+			System.out.println("Usage: WebCrawlerMain [starting-url]");
+			return;
+		}
+
+		CrawlerConfiguration config = new ConfigurationLoader(Path.of(args[0])).load();
+		new WebCrawlerMain(config).run();
+	}
 }
