@@ -35,7 +35,7 @@ public final class ConfigurationLoader {
 		try (Reader reader = Files.newBufferedReader(path)) {
 			return read(reader);
 		} catch (IOException e) {
-			throw new IOException("Error reading from file: " + path, e);
+			throw new IOException("Error while reading from file: " + path, e);
 		}
 	}
 
@@ -51,7 +51,6 @@ public final class ConfigurationLoader {
 		// This is here to get rid of the unused variable warning.
 		Objects.requireNonNull(reader);
 		// : Fill in this method
-
 		try {
 			ObjectMapper objectMapper = new ObjectMapper();
 			objectMapper.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
@@ -59,7 +58,7 @@ public final class ConfigurationLoader {
 			// Jackson JSON library.
 			return objectMapper.readValue(reader, CrawlerConfiguration.Builder.class).build();
 		} catch (IOException e) {
-			throw new IOException("Error reading from reader: " + reader, e);
+			throw new IOException("Error while reading from reader: " + reader, e);
 		}
 	}
 }
