@@ -13,7 +13,7 @@ import com.udacity.webcrawler.parser.PageParserFactory;
 /**
  * A class that crawls data from a given URL and its links.
  */
-public class DataCrawler extends RecursiveTask<Boolean> {
+public class DataHandleCrawler extends RecursiveTask<Boolean> {
     private final String url;
     private final int maxDepth;
     private final Instant deadline;
@@ -23,7 +23,7 @@ public class DataCrawler extends RecursiveTask<Boolean> {
     private final Clock clock;
     private final PageParserFactory parserFactory;
 
-    public DataCrawler(String url, int maxDepth, Instant deadline, ConcurrentMap<String, Integer> counts,
+    public DataHandleCrawler(String url, int maxDepth, Instant deadline, ConcurrentMap<String, Integer> counts,
             ConcurrentSkipListSet<String> visitedUrls, List<Pattern> ignoredUrls, Clock clock,
             PageParserFactory parserFactory) {
         this.url = url;
@@ -43,16 +43,13 @@ public class DataCrawler extends RecursiveTask<Boolean> {
      */
     @Override
     protected Boolean compute() {
-        if (shouldStopCrawling()) {
+        if (checkStopCrawling()) {
             return false;
         }
-
         if(!visitedUrls.add(url)) {
             return false;
         }
-
         PageParser.Result result = parsePage();
-
         updateWordCounts(result);
         crawlLinks(result);
 
@@ -64,15 +61,13 @@ public class DataCrawler extends RecursiveTask<Boolean> {
      * 
      * @return true if the task should stop, false otherwise.
      */
-    private boolean shouldStopCrawling() {
+    private boolean checkStopCrawling() {
         if (maxDepth == 0 || clock.instant().isAfter(deadline)) {
             return true;
         }
-
         if (isUrlIgnored()) {
             return true;
         }
-
         return false;
     }
 
@@ -111,9 +106,9 @@ public class DataCrawler extends RecursiveTask<Boolean> {
      * @param result the result of the page parsing.
      */
     private void crawlLinks(PageParser.Result result) {
-        List<DataCrawler> subtasks = new ArrayList<>();
+        List<DataHandleCrawler> subtasks = new ArrayList<>();
         for (String link : result.getLinks()) {
-            subtasks.add(new DataCrawler(link, maxDepth - 1, deadline, counts, visitedUrls, ignoredUrls, clock,
+            subtasks.add(new DataHandleCrawler(link, maxDepth - 1, deadline, counts, visitedUrls, ignoredUrls, clock,
                     parserFactory));
         }
         invokeAll(subtasks);

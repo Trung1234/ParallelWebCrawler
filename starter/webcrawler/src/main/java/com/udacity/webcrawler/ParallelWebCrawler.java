@@ -20,60 +20,55 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * A concrete implementation of {@link WebCrawler} that runs multiple threads on a
- * {@link ForkJoinPool} to fetch and process multiple web pages in parallel.
+ * A concrete implementation of {@link WebCrawler} that runs multiple threads on
+ * a {@link ForkJoinPool} to fetch and process multiple web pages in parallel.
  */
 final class ParallelWebCrawler implements WebCrawler {
 	private final Clock clock;
-	  private final Duration timeout;
-	  private final int popularWordCount;
-	  private final ForkJoinPool pool;
-	  private final int maxDepth;
-	  private final List<Pattern> ignoredUrls;
-	  private final PageParserFactory parserFactory;
+	private final Duration timeout;
+	private final int popularWordCount;
+	private final ForkJoinPool pool;
+	private final int maxDepth;
+	private final List<Pattern> ignoredUrls;
+	private final PageParserFactory parserFactory;
 
-	  @Inject
-	  ParallelWebCrawler(
-	      Clock clock,
-	      @Timeout Duration timeout,
-	      @PopularWordCount int popularWordCount,
-	      @TargetParallelism int threadCount, 
-	      @MaxDepth int maxDepth,
-	      @IgnoredUrls List<Pattern> ignoredUrls,
-	      PageParserFactory parserFactory) {
-	    this.clock = clock;
-	    this.timeout = timeout;
-	    this.popularWordCount = popularWordCount;
-	    this.pool = new ForkJoinPool(Math.min(threadCount, getMaxParallelism()));
-	    this.maxDepth = maxDepth;
-	    this.ignoredUrls = ignoredUrls;
-	    this.parserFactory = parserFactory;
-	  }
+	@Inject
+	ParallelWebCrawler(Clock clock, @Timeout Duration timeout, @PopularWordCount int popularWordCount,
+			@TargetParallelism int threadCount, @MaxDepth int maxDepth, @IgnoredUrls List<Pattern> ignoredUrls,
+			PageParserFactory parserFactory) {
+		this.clock = clock;
+		this.timeout = timeout;
+		this.popularWordCount = popularWordCount;
+		this.pool = new ForkJoinPool(Math.min(threadCount, getMaxParallelism()));
+		this.maxDepth = maxDepth;
+		this.ignoredUrls = ignoredUrls;
+		this.parserFactory = parserFactory;
+	}
 
-	  /**
-	   * Computes the crawl result.
-	   *
-	   * @param startingUrls the URLs to crawl.
-	   * @return the {@link CrawlResult}.
-	   */
-	  @Override
-	  public CrawlResult crawl(List<String> startingUrls) {
-	      Instant deadline = clock.instant().plus(timeout);
-	      ConcurrentMap<String, Integer> counts = new ConcurrentHashMap<>();
-	      ConcurrentSkipListSet<String> visitedUrls = new ConcurrentSkipListSet<>();
+	/**
+	 * Computes the crawl result.
+	 *
+	 * @param startingUrls the URLs to crawl.
+	 * @return the {@link CrawlResult}.
+	 */
+	@Override
+	public CrawlResult crawl(List<String> startingUrls) {
+		Instant deadline = clock.instant().plus(timeout);
+		ConcurrentMap<String, Integer> counts = new ConcurrentHashMap<>();
+		ConcurrentSkipListSet<String> visitedUrls = new ConcurrentSkipListSet<>();
 
-	      startingUrls.forEach(url -> pool.invoke(new DataCrawler(url, maxDepth, deadline, counts, visitedUrls, ignoredUrls, clock, parserFactory)));
+		startingUrls.forEach(url -> pool.invoke(
+				new DataHandleCrawler(url, maxDepth, deadline, counts, visitedUrls, ignoredUrls, clock, parserFactory)));
 
-	      Map<String, Integer> wordCounts = counts.isEmpty() ? counts : WordCounts.sort(counts, popularWordCount);
+		if (counts.isEmpty()) {
+			return new CrawlResult.Builder().setWordCounts(counts).setUrlsVisited(visitedUrls.size()).build();
+		}
+		return new CrawlResult.Builder().setWordCounts(WordCounts.sort(counts, popularWordCount))
+				.setUrlsVisited(visitedUrls.size()).build();
+	}
 
-	      return new CrawlResult.Builder()
-	          .setWordCounts(wordCounts)
-	          .setUrlsVisited(visitedUrls.size())
-	          .build();
-	  }
-
-  @Override
-  public int getMaxParallelism() {
-    return Runtime.getRuntime().availableProcessors();
-  }
+	@Override
+	public int getMaxParallelism() {
+		return Runtime.getRuntime().availableProcessors();
+	}
 }
